@@ -1,0 +1,306 @@
+// PostgreSQL schema for the Ratouli village temple site.
+// Media bytes never live in Postgres — only URLs + metadata.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------------------------------------------------------------- admin
+
+enum Role {
+  ADMIN
+  EDITOR
+}
+
+model AdminUser {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         Role      @default(EDITOR)
+  isActive     Boolean   @default(true)
+  lastLoginAt  DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  events        Event[]
+  announcements Announcement[]
+  uploads       MediaAsset[]
+  auditLogs     AuditLog[]
+}
+
+/// Append-only trail of who changed what. Useful when several people from
+/// the temple committee share admin access.
+model AuditLog {
+  id         String     @id @default(cuid())
+  actorId    String?
+  actor      AdminUser? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action     String // created | updated | deleted | published | uploaded
+  entityType String // Event | Announcement | MediaAsset | TempleInfo
+  entityId   String
+  summary    String?
+  createdAt  DateTime   @default(now())
+
+  @@index([entityType, entityId])
+  @@index([createdAt])
+}
+
+// ---------------------------------------------------------------- content
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+/// Categories are rows, not an enum, so the committee can add their own.
+model EventCategory {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  slug      String   @unique
+  /// Hex colour used for the dot on the calendar.
+  color     String   @default("#B1332E")
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+
+  events Event[]
+}
+
+model Event {
+  id          String  @id @default(cuid())
+  title       String
+  titleHi     String?
+  slug        String  @unique
+  description String  @db.Text
+  summary     String? @db.VarChar(280)
+
+  startDate DateTime  @db.Date
+  endDate   DateTime? @db.Date
+  /// "HH:mm" wall-clock IST. A 5:30 aarti stays 5:30 regardless of where
+  /// the server happens to run.
+  startTime String?   @db.VarChar(5)
+  endTime   String?   @db.VarChar(5)
+  allDay    Boolean   @default(false)
+
+  location         String  @default("Village Temple, Ratouli")
+  organizer        String?
+  contactName      String?
+  contactPhone     String?
+  registrationUrl  String?
+  registrationNote String?
+
+  categoryId String?
+  category   EventCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  coverImageId String?     @unique
+  coverImage   MediaAsset? @relation("EventCover", fields: [coverImageId], references: [id], onDelete: SetNull)
+
+  media  MediaAsset[] @relation("EventMedia")
+  videos Video[]
+
+  isFeatured  Boolean       @default(false)
+  status      PublishStatus @default(DRAFT)
+  publishedAt DateTime?
+
+  authorId String?
+  author   AdminUser? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, startDate])
+  @@index([isFeatured, status])
+  @@index([categoryId])
+}
+
+enum AnnouncementPriority {
+  NORMAL
+  IMPORTANT
+  URGENT
+}
+
+model Announcement {
+  id       String  @id @default(cuid())
+  title    String
+  titleHi  String?
+  body     String  @db.Text
+  startsAt DateTime @default(now())
+  /// Null = never expires. Past values drop it off the homepage automatically.
+  expiresAt DateTime?
+  priority  AnnouncementPriority @default(NORMAL)
+  status    PublishStatus        @default(DRAFT)
+  linkUrl   String?
+
+  authorId String?
+  author   AdminUser? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, startsAt, expiresAt])
+}
+
+// ---------------------------------------------------------------- media
+
+enum MediaKind {
+  IMAGE
+  VIDEO
+}
+
+model Album {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?
+  coverId     String?
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  media MediaAsset[]
+}
+
+model MediaAsset {
+  id   String    @id @default(cuid())
+  kind MediaKind @default(IMAGE)
+  /// Provider + key, so the file can also be removed from storage later.
+  provider     String  @default("cloudinary")
+  storageKey   String
+  url          String  @db.Text
+  thumbnailUrl String? @db.Text
+  width        Int?
+  height       Int?
+  bytes        Int?
+  mimeType     String?
+
+  title   String?
+  caption String?
+  altText String?
+
+  albumId String?
+  album   Album?  @relation(fields: [albumId], references: [id], onDelete: SetNull)
+
+  eventId String?
+  event   Event?  @relation("EventMedia", fields: [eventId], references: [id], onDelete: SetNull)
+
+  coverOf Event? @relation("EventCover")
+
+  isFeatured Boolean   @default(false)
+  sortOrder  Int       @default(0)
+  takenAt    DateTime?
+
+  uploadedById String?
+  uploadedBy   AdminUser? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+
+  @@index([kind, createdAt])
+  @@index([albumId])
+  @@index([eventId])
+}
+
+enum VideoSource {
+  YOUTUBE
+  UPLOAD
+}
+
+model Video {
+  id          String      @id @default(cuid())
+  title       String
+  description String?     @db.Text
+  source      VideoSource @default(YOUTUBE)
+  youtubeId   String?
+  fileUrl     String?     @db.Text
+  thumbnailUrl String?    @db.Text
+  durationSec Int?
+
+  eventId String?
+  event   Event?  @relation(fields: [eventId], references: [id], onDelete: SetNull)
+
+  status     PublishStatus @default(PUBLISHED)
+  isFeatured Boolean       @default(false)
+  sortOrder  Int           @default(0)
+  createdAt  DateTime      @default(now())
+
+  @@index([status, createdAt])
+}
+
+// ---------------------------------------------------------------- temple
+
+/// Single row (id = "temple"). Everything the committee can reword without
+/// needing a developer.
+model TempleInfo {
+  id             String  @id @default("temple")
+  name           String
+  nameHi         String?
+  tagline        String?
+  welcomeHeading String?
+  welcomeBody    String? @db.Text
+
+  introduction String? @db.Text
+  history      String? @db.Text
+  significance String? @db.Text
+  community    String? @db.Text
+  traditions   String? @db.Text
+
+  addressLine  String  @default("Village Ratouli")
+  district     String  @default("Yamunanagar")
+  state        String  @default("Haryana")
+  pincode      String  @default("135003")
+  country      String  @default("India")
+  latitude     Float?
+  longitude    Float?
+  mapsPlaceUrl String?
+
+  phone        String?
+  altPhone     String?
+  email        String?
+  whatsapp     String?
+  facebookUrl  String?
+  instagramUrl String?
+  youtubeUrl   String?
+
+  heroImageUrl String? @db.Text
+  heroVideoUrl String? @db.Text
+
+  updatedAt DateTime @updatedAt
+}
+
+/// Darshan windows, kept as rows so seasonal changes (summer vs winter
+/// timings) are an edit, not a deploy.
+model TempleTiming {
+  id      String  @id @default(cuid())
+  label   String
+  labelHi String?
+  /// 0 = every day. 1-7 = Monday-Sunday.
+  dayOfWeek Int    @default(0)
+  opensAt   String @db.VarChar(5)
+  closesAt  String @db.VarChar(5)
+  note      String?
+  sortOrder Int    @default(0)
+
+  @@index([dayOfWeek])
+}
+
+model SiteSetting {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @updatedAt
+}
+
+model ContactMessage {
+  id        String   @id @default(cuid())
+  name      String
+  phone     String?
+  email     String?
+  subject   String?
+  message   String   @db.Text
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([isRead, createdAt])
+}

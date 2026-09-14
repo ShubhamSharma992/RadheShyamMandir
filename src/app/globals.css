@@ -1,0 +1,113 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --rule: rgba(30, 42, 34, 0.14);
+    --rule-brass: rgba(180, 124, 20, 0.35);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  body {
+    @apply bg-whitewash text-bark font-body text-step-0 antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display font-normal text-balance;
+  }
+
+  /* Devanagari sits a little larger than Latin at the same nominal size. */
+  :lang(hi) {
+    font-size: 0.95em;
+    line-height: 1.75;
+  }
+
+  ::selection {
+    @apply bg-brass-tint text-bark;
+  }
+
+  :focus-visible {
+    outline: 2px solid theme('colors.sindoor.DEFAULT');
+    outline-offset: 3px;
+    border-radius: 2px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .shell {
+    @apply mx-auto w-full max-w-shell px-5 sm:px-8 lg:px-12;
+  }
+
+  .section {
+    @apply py-16 sm:py-20 lg:py-24;
+  }
+
+  /* The one signature shape: a pointed torana arch, used to mask images. */
+  .arch-mask {
+    clip-path: path('M 0,100 L 0,42 A 50,50 0 0 1 100,42 L 100,100 Z');
+    clip-path: polygon(
+      0% 100%, 0% 38%, 8% 24%, 22% 12%, 38% 4%, 50% 0%,
+      62% 4%, 78% 12%, 92% 24%, 100% 38%, 100% 100%
+    );
+  }
+
+  .rule {
+    @apply border-0 border-t;
+    border-color: var(--rule);
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 text-step--1 font-medium
+           transition-colors duration-200 disabled:cursor-not-allowed disabled:opacity-55;
+  }
+
+  .btn-primary {
+    @apply btn bg-sindoor text-whitewash hover:bg-sindoor-deep;
+  }
+
+  .btn-ghost {
+    @apply btn border border-bark/25 text-bark hover:border-bark/60 hover:bg-bark/[0.03];
+  }
+
+  .btn-brass {
+    @apply btn bg-brass text-bark hover:bg-brass-deep hover:text-whitewash;
+  }
+
+  .field {
+    @apply w-full border border-bark/20 bg-white px-3.5 py-2.5 text-step-0 text-bark
+           placeholder:text-bark-muted focus:border-sindoor focus:outline-none;
+  }
+
+  .field-label {
+    @apply mb-1.5 block text-step--1 font-medium text-bark-soft;
+  }
+
+  .field-error {
+    @apply mt-1.5 block text-step--1 text-sindoor;
+  }
+
+  .link-underline {
+    @apply underline decoration-brass decoration-1 underline-offset-4 hover:decoration-sindoor;
+  }
+
+  .prose-temple {
+    @apply max-w-prose text-step-0 leading-[1.75] text-bark-soft;
+  }
+  .prose-temple p + p {
+    @apply mt-5;
+  }
+}

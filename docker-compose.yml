@@ -1,0 +1,23 @@
+# Postgres for local development. In production the database runs as its own
+# managed service (Neon, Supabase, RDS) — nothing about the app assumes it
+# lives on the same host.
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: temple
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: temple
+    ports:
+      - '5432:5432'
+    volumes:
+      - temple-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U temple']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  temple-db:
