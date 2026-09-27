@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- Flute icon in gold/amber color -->
+  <defs>
+    <style>
+      .flute-body { fill: #D4A574; stroke: #8B6F47; stroke-width: 1; }
+      .flute-hole { fill: #4A3728; }
+    </style>
+  </defs>
+  
+  <!-- Main flute body -->
+  <path class="flute-body" d="M 10 28 Q 12 26 14 26 L 50 26 Q 52 26 54 28 L 54 36 Q 52 38 50 38 L 14 38 Q 12 38 10 36 Z"/>
+  
+  <!-- Flute holes (tone holes) -->
+  <circle class="flute-hole" cx="22" cy="32" r="2.5"/>
+  <circle class="flute-hole" cx="30" cy="32" r="2.5"/>
+  <circle class="flute-hole" cx="38" cy="32" r="2.5"/>
+  <circle class="flute-hole" cx="46" cy="32" r="2.5"/>
+  
+  <!-- Embouchure hole (side blow hole) -->
+  <ellipse class="flute-hole" cx="14" cy="24" rx="2" ry="3"/>
+</svg>

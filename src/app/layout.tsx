@@ -34,6 +34,9 @@ export async function generateMetadata(): Promise<Metadata> {
     description:
       temple?.tagline ??
       `Darshan timings, festivals, events and photographs from the temple at ${place}.`,
+    icons: {
+      icon: '/favicon.svg',
+    },
     openGraph: {
       type: 'website',
       locale: 'en_IN',
